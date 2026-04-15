@@ -4,6 +4,8 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends     curl ca-certificates     && rm -rf /var/lib/apt/lists/*
 
+RUN pip install --no-cache-dir azure-identity azure-storage-blob requests
+
 COPY bridge/ /app/bridge/
 
 ENV PYTHONPATH="/app"     PORT=8080     PYTHONUNBUFFERED=1
