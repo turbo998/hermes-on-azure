@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+.env
+.env.*
+.pytest_cache/
+.mypy_cache/
+
+# Terraform / Bicep
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+
+# Build / package
+build/
+dist/
+*.tar
+*.zip
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Runtime output
+logs/
+.cache/
+output/
