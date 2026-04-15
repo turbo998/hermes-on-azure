@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide explains a more deployable phased model for the **Hermes Agent on Azure Workshop** repository.
+This guide explains a more realistic phased deployment model for the **Hermes Agent on Azure Workshop** repository.
 
 ---
 
@@ -42,9 +42,10 @@ Goal:
 Expected components:
 - resource group
 - network layout
-- storage account
+- storage account and blob container
 - key vault
 - managed identity
+- storage RBAC assignment
 - container registry
 - monitoring workspace
 
@@ -66,6 +67,8 @@ Expected components:
 - Container Apps environment
 - Container App runtime
 - ingress endpoint
+- workspace environment variables
+- readiness and liveness probes
 
 Run:
 
@@ -103,28 +106,7 @@ bash scripts/setup_channels.sh slack <apim-host>
 
 ---
 
-## 5. Validation checklist
-
-After Phase 1:
-- resource group exists
-- key vault exists
-- storage account exists
-- managed identity exists
-
-After Phase 2:
-- container app exists
-- image exists in ACR
-- `healthz` returns success
-- `readyz` transitions to ready after startup
-
-After Phase 3:
-- APIM route exists
-- channel route strategy is defined
-- demo client can hit the invocation endpoint
-
----
-
-## 6. Runtime configuration notes
+## 5. Runtime configuration notes
 
 ### Azure OpenAI path
 
@@ -133,6 +115,8 @@ Required environment variables:
 - `HERMES_PROVIDER_MODE=azure-openai`
 - `AZURE_OPENAI_ENDPOINT`
 - `AZURE_OPENAI_DEPLOYMENT`
+
+The bridge now validates these at startup.
 
 ### Azure AI Foundry path
 
@@ -149,6 +133,32 @@ Recommended environment variables:
 - `WORKSPACE_CONTAINER=hermes-workspace`
 - `WORKSPACE_NAMESPACE=<stable-namespace>`
 
+The bridge now contains a lightweight recursive Blob restore/save implementation.
+
+---
+
+## 6. Validation checklist
+
+After Phase 1:
+- resource group exists
+- key vault exists
+- storage account exists
+- blob container exists
+- managed identity exists
+- storage RBAC exists
+
+After Phase 2:
+- container app exists
+- image exists in ACR
+- `healthz` returns success
+- `readyz` transitions to ready after startup
+- environment variables for workspace/provider are visible in the app configuration
+
+After Phase 3:
+- APIM route exists
+- channel route strategy is defined
+- demo client can hit the invocation endpoint
+
 ---
 
 ## 7. Teardown
@@ -163,11 +173,11 @@ Add `--force` to skip confirmation.
 
 ## 8. Current maturity note
 
-This repo is now closer to deployable than the first draft:
+This repo is now best described as a **deployable workshop starter repo with real cloud wiring patterns**:
 
-- the deployment script now models real phase execution
-- the provider layer validates required configuration
-- the workspace sync layer has Azure Blob SDK hooks
-- the channel setup helper is included
+- provider bootstrap validates real Azure configuration
+- workspace sync models real Blob restore/save behavior
+- storage RBAC and container env wiring are represented in Bicep
+- probes and workspace env vars are represented in Container Apps config
 
-It is still best described as a **deployable workshop starter repo**, not a fully production-hardened landing-zone implementation.
+It is still not a fully production-hardened landing-zone implementation, but it is substantially closer to something a customer team could adapt into a real internal starter repo.

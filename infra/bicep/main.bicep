@@ -31,16 +31,6 @@ module network 'modules/network.bicep' = {
   }
 }
 
-module identity 'modules/identity.bicep' = {
-  name: 'identity'
-  scope: rg
-  params: {
-    location: location
-    resourcePrefix: resourcePrefix
-    environmentName: environmentName
-  }
-}
-
 module storage 'modules/storage.bicep' = {
   name: 'storage'
   scope: rg
@@ -49,6 +39,17 @@ module storage 'modules/storage.bicep' = {
     resourcePrefix: resourcePrefix
     environmentName: environmentName
     subnetId: network.outputs.privateEndpointSubnetId
+  }
+}
+
+module identity 'modules/identity.bicep' = {
+  name: 'identity'
+  scope: rg
+  params: {
+    location: location
+    resourcePrefix: resourcePrefix
+    environmentName: environmentName
+    storageAccountId: storage.outputs.storageAccountId
   }
 }
 
@@ -95,6 +96,7 @@ module containerApp 'modules/container-app.bicep' = {
     managedIdentityClientId: identity.outputs.managedIdentityClientId
     acrLoginServer: acr.outputs.loginServer
     storageAccountName: storage.outputs.storageAccountName
+    storageContainerName: storage.outputs.blobContainerName
     keyVaultUri: keyvault.outputs.keyVaultUri
     logAnalyticsCustomerId: monitoring.outputs.workspaceCustomerId
     logAnalyticsSharedKey: monitoring.outputs.workspaceSharedKey

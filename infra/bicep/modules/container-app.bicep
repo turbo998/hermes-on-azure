@@ -6,6 +6,7 @@ param managedIdentityId string
 param managedIdentityClientId string
 param acrLoginServer string
 param storageAccountName string
+param storageContainerName string
 param keyVaultUri string
 param logAnalyticsCustomerId string
 @secure()
@@ -44,6 +45,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
       ingress: {
         external: true
         targetPort: 8080
+        transport: 'auto'
       }
       registries: [
         {
@@ -67,16 +69,56 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
               value: storageAccountName
             }
             {
+              name: 'WORKSPACE_CONTAINER'
+              value: storageContainerName
+            }
+            {
+              name: 'WORKSPACE_NAMESPACE'
+              value: '${environmentName}-default'
+            }
+            {
               name: 'KEY_VAULT_URI'
               value: keyVaultUri
+            }
+            {
+              name: 'HERMES_PROVIDER_MODE'
+              value: 'azure-openai'
+            }
+            {
+              name: 'AZURE_OPENAI_DEPLOYMENT'
+              value: 'gpt-4o'
             }
           ]
           resources: {
             cpu: json('1.0')
             memory: '2Gi'
           }
+          probes: [
+            {
+              type: 'Liveness'
+              httpGet: {
+                path: '/healthz'
+                port: 8080
+              }
+              initialDelaySeconds: 10
+              periodSeconds: 15
+            }
+            {
+              type: 'Readiness'
+              httpGet: {
+                path: '/readyz'
+                port: 8080
+              }
+              initialDelaySeconds: 15
+              periodSeconds: 10
+            }
+          ]
         }
       ]
+      scale: {
+        minReplicas: 1
+        maxReplicas: 3
+      }
     }
   }
 }

@@ -1,16 +1,12 @@
 """Azure Blob Storage backed workspace sync.
 
-This implementation intentionally stays lightweight for workshop use, but it is
-closer to deployable behavior than the original placeholder:
-- optional SDK import
-- no-op safe fallback when SDK is unavailable
-- explicit restore/save interfaces
+This version adds a lightweight recursive restore/save implementation so the
+workshop repository is closer to a deployable starter.
 """
 
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -22,6 +18,8 @@ try:
 except Exception:  # pragma: no cover - optional dependency for workshop environments
     DefaultAzureCredential = None  # type: ignore
     BlobServiceClient = None  # type: ignore
+
+SKIP_SUFFIXES = {'.pyc', '.pyo', '.log', '.tmp'}
 
 
 @dataclass
@@ -35,23 +33,48 @@ class WorkspaceSync:
             logger.warning('Azure Blob SDK not installed; workspace sync running in no-op mode')
             return None
         credential = DefaultAzureCredential(exclude_interactive_browser_credential=True)
-        return BlobServiceClient(
+        service = BlobServiceClient(
             account_url=f'https://{self.account_name}.blob.core.windows.net',
             credential=credential,
-        ).get_container_client(self.container_name)
+        )
+        return service.get_container_client(self.container_name)
 
     def restore(self, namespace: str) -> None:
         client = self._client()
         if client is None:
             return
-        Path(self.workspace).mkdir(parents=True, exist_ok=True)
-        logger.info('Workspace restore requested for namespace=%s', namespace)
-        # Production-grade recursive blob restore can be added here.
+        base = Path(self.workspace)
+        base.mkdir(parents=True, exist_ok=True)
+        prefix = f'{namespace}/.hermes/'
+        logger.info('Restoring workspace from container=%s prefix=%s', self.container_name, prefix)
+        try:
+            for blob in client.list_blobs(name_starts_with=prefix):
+                relative = blob.name[len(prefix):]
+                if not relative:
+                    continue
+                path = base / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with open(path, 'wb') as handle:
+                    handle.write(client.download_blob(blob.name).readall())
+        except Exception as exc:
+            logger.warning('Workspace restore failed: %s', exc)
 
     def save(self, namespace: str) -> None:
         client = self._client()
         if client is None:
             return
-        Path(self.workspace).mkdir(parents=True, exist_ok=True)
-        logger.info('Workspace save requested for namespace=%s', namespace)
-        # Production-grade recursive blob upload can be added here.
+        base = Path(self.workspace)
+        base.mkdir(parents=True, exist_ok=True)
+        prefix = f'{namespace}/.hermes/'
+        logger.info('Saving workspace to container=%s prefix=%s', self.container_name, prefix)
+        try:
+            for path in base.rglob('*'):
+                if path.is_dir():
+                    continue
+                if path.suffix in SKIP_SUFFIXES:
+                    continue
+                relative = str(path.relative_to(base))
+                with open(path, 'rb') as handle:
+                    client.upload_blob(f'{prefix}{relative}', handle, overwrite=True)
+        except Exception as exc:
+            logger.warning('Workspace save failed: %s', exc)
