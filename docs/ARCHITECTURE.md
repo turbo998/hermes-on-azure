@@ -26,7 +26,7 @@ The architecture should be:
 flowchart TD
     U[Users / Channels] --> APIM[Azure API Management]
     APIM --> ACA[Azure Container Apps]
-    ACA --> H[Hermes Agent Runtime]
+    ACA --> H[Hermes Contract + Runtime Adapter]
     H --> KV[Azure Key Vault]
     H --> BLOB[Azure Blob Storage]
     H --> AOAI[Azure OpenAI]
@@ -44,6 +44,7 @@ Responsibilities:
 - normalize public endpoints
 - apply throttling and policy
 - isolate external channel concerns from the runtime
+- add diagnostics and correlation headers
 
 #### Azure Container Apps
 Used as the runtime platform for Hermes Agent.
@@ -53,6 +54,15 @@ Responsibilities:
 - expose HTTP ingress
 - support health and readiness checks
 - support revision-based deployment
+
+#### Hermes contract + runtime adapter
+Used as the runtime boundary inside the container.
+
+Responsibilities:
+- keep the HTTP contract stable
+- centralize provider bootstrap
+- centralize workspace restore/save lifecycle
+- provide a seam for plugging in a real Hermes runtime later
 
 #### Azure Blob Storage
 Used for workspace persistence.
@@ -92,10 +102,10 @@ Responsibilities:
 ### Inbound request flow
 
 1. External channel sends request to APIM
-2. APIM applies policy, route mapping, and throttling
+2. APIM applies policy, route mapping, throttling, and correlation headers
 3. Request is forwarded to Container Apps ingress
-4. Hermes bridge endpoint receives `/invocations`
-5. Hermes loads runtime context and provider config
+4. Hermes contract endpoint receives `/invocations`
+5. Runtime adapter applies provider and lifecycle context
 6. Hermes calls Azure OpenAI or Azure AI Foundry
 7. Response returns through the same chain
 
@@ -105,6 +115,7 @@ Responsibilities:
 2. Blob-backed workspace state is restored
 3. Hermes runtime processes messages
 4. Periodic sync writes updated workspace state back to Blob Storage
+5. On shutdown, a final save is attempted before exit
 
 ---
 
@@ -125,11 +136,11 @@ Responsibilities:
 
 | WAF pillar | Current architecture choice | Intent |
 |---|---|---|
-| Reliability | healthz / readyz, staged runtime loading, workspace restore | keep runtime available and observable |
-| Security | Managed Identity, Key Vault, governed ingress | reduce credential sprawl and improve boundary control |
+| Reliability | healthz / readyz, workspace restore/save, shutdown flush | keep runtime available and observable |
+| Security | Managed Identity, Key Vault, governed ingress, APIM policy | reduce credential sprawl and improve boundary control |
 | Cost Optimization | Container Apps serverless model, APIM tier selection, model routing | control workshop and PoC spend |
-| Operational Excellence | modular docs + scripts + IaC | improve handoff and repeatability |
-| Performance Efficiency | HTTP ingress, lightweight runtime bridge, scalable container model | support bursty agent interactions |
+| Operational Excellence | modular docs + scripts + IaC + runtime adapter seam | improve handoff and repeatability |
+| Performance Efficiency | HTTP ingress, scalable container model, lightweight contract layer | support bursty agent interactions |
 
 ---
 

@@ -43,7 +43,7 @@ Expected components:
 - resource group
 - network layout
 - storage account and blob container
-- key vault
+- key vault with starter secrets
 - managed identity
 - storage RBAC assignment
 - container registry
@@ -69,6 +69,7 @@ Expected components:
 - ingress endpoint
 - workspace environment variables
 - periodic workspace save configuration
+- provider endpoint secret/env wiring
 - readiness and liveness probes
 
 Run:
@@ -143,6 +144,12 @@ The bridge now contains:
 - periodic save loop
 - save on shutdown
 
+### Runtime adapter seam
+
+The contract layer now includes a runtime adapter boundary so that a future drop-in
+real Hermes runtime can replace the placeholder chat/cron handling without changing
+the HTTP contract or lifecycle wiring.
+
 ---
 
 ## 6. Validation checklist
@@ -150,6 +157,7 @@ The bridge now contains:
 After Phase 1:
 - resource group exists
 - key vault exists
+- starter secrets exist
 - storage account exists
 - blob container exists
 - managed identity exists
@@ -165,6 +173,7 @@ After Phase 2:
 
 After Phase 3:
 - APIM route exists
+- APIM policy rewrites to `/invocations`
 - channel route strategy is defined
 - demo client can hit the invocation endpoint
 - status action returns provider/runtime metadata
@@ -183,12 +192,13 @@ Add `--force` to skip confirmation.
 
 ## 8. Current maturity note
 
-This repo is now best described as a **deployable workshop starter repo with lifecycle-aware runtime behavior**:
+This repo is now best described as a **deployable workshop starter repo with lifecycle-aware runtime behavior and a service-adapter seam**:
 
 - provider bootstrap validates real Azure configuration
 - workspace sync restores, periodically saves, and flushes on shutdown
 - storage RBAC and container env wiring are represented in Bicep
-- probes and runtime state are represented in Container Apps config
+- APIM API and policy structure are represented in IaC
 - runtime supports `status`, `warmup`, and `cron` style actions
+- a future real Hermes runtime can be connected behind the contract layer
 
 It is still not a fully production-hardened landing-zone implementation, but it is now much closer to something a customer team could adapt into a real internal starter repo.

@@ -5,11 +5,9 @@ Endpoints:
 - GET /readyz    -> readiness probe
 - POST /invocations -> normalized invocation endpoint
 
-This version adds a more realistic runtime lifecycle:
-- provider bootstrap at startup
-- workspace restore + periodic save
-- status and cron actions
-- graceful shutdown save hook
+This version introduces a basic runtime adapter seam so the workshop repo can
+show how a real Hermes runtime would be plugged in later without rewriting the
+HTTP contract layer.
 """
 
 from __future__ import annotations
@@ -30,11 +28,30 @@ from bridge.workspace_sync import WorkspaceSync
 logger = logging.getLogger('azure.contract')
 
 
+class RuntimeAdapter:
+    """Workshop runtime adapter seam.
+
+    Today this remains a placeholder implementation, but the surrounding code now
+    treats it as an injectable runtime boundary.
+    """
+
+    def __init__(self, provider_config: dict[str, str]) -> None:
+        self.provider_config = provider_config
+
+    def chat(self, message: str, channel: str, user_id: str) -> str:
+        provider_mode = self.provider_config.get('providerMode', 'unknown')
+        return f'Hermes Agent on Azure ({provider_mode}) received from {channel}/{user_id}: {message}'
+
+    def cron(self, prompt: str) -> str:
+        return f'Cron execution placeholder: {prompt}'
+
+
 class State:
     agent_ready: bool = False
     lightweight_ready: bool = True
     provider_config: dict[str, str] | None = None
     workspace_sync: WorkspaceSync | None = None
+    runtime_adapter: RuntimeAdapter | None = None
     busy_count: int = 0
     busy_lock = threading.Lock()
     start_time: float = time.time()
@@ -108,19 +125,20 @@ def _handle_chat(body: dict[str, Any]) -> dict[str, Any]:
     message = body.get('message', '')
     channel = body.get('channel', 'azure')
     user_id = body.get('userId', 'unknown')
-    provider_mode = (S.provider_config or {}).get('providerMode', 'unknown')
+    response_text = S.runtime_adapter.chat(message, channel, user_id) if S.runtime_adapter else message
     return {
-        'response': f'Hermes Agent on Azure ({provider_mode}) received from {channel}/{user_id}: {message}',
+        'response': response_text,
         'provider': S.provider_config or {},
     }
 
 
 def _handle_cron(body: dict[str, Any]) -> dict[str, Any]:
     prompt = body.get('config', {}).get('prompt', body.get('message', ''))
+    response_text = S.runtime_adapter.cron(prompt) if S.runtime_adapter else prompt
     return {
         'ready': S.agent_ready,
         'jobId': body.get('jobId', ''),
-        'response': f'Cron execution placeholder: {prompt}',
+        'response': response_text,
         'provider': S.provider_config or {},
     }
 
@@ -142,6 +160,7 @@ def _init_runtime() -> None:
         sync.start_periodic_save(workspace_namespace)
         S.workspace_sync = sync
 
+    S.runtime_adapter = RuntimeAdapter(S.provider_config)
     S.agent_ready = True
     logger.info('Azure runtime initialized: %s', S.provider_config)
 

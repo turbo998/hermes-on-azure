@@ -53,6 +53,16 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
           identity: managedIdentityId
         }
       ]
+      secrets: [
+        {
+          name: 'aoai-endpoint'
+          value: 'set-via-keyvault-or-post-deploy'
+        }
+        {
+          name: 'foundry-endpoint'
+          value: 'set-via-keyvault-or-post-deploy'
+        }
+      ]
     }
     template: {
       containers: [
@@ -95,6 +105,14 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'HERMES_MODEL'
               value: 'gpt-4o'
+            }
+            {
+              name: 'AZURE_OPENAI_ENDPOINT'
+              secretRef: 'aoai-endpoint'
+            }
+            {
+              name: 'AZURE_AI_FOUNDRY_ENDPOINT'
+              secretRef: 'foundry-endpoint'
             }
           ]
           resources: {
