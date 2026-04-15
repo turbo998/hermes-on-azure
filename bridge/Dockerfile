@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir azure-identity azure-storage-blob azure-keyvault-
 
 COPY bridge/ /app/bridge/
 
-ENV PYTHONPATH="/app"     PORT=8080     PYTHONUNBUFFERED=1     HERMES_HOME=/mnt/workspace/.hermes
+ENV PYTHONPATH="/app"     PORT=8080     PYTHONUNBUFFERED=1     HERMES_HOME=/mnt/workspace/.hermes     WORKSPACE_CONTAINER=hermes-workspace     WORKSPACE_SYNC_INTERVAL=300
 
 EXPOSE 8080
 RUN chmod +x /app/bridge/entrypoint.sh

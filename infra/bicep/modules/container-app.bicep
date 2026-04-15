@@ -77,6 +77,10 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
               value: '${environmentName}-default'
             }
             {
+              name: 'WORKSPACE_SYNC_INTERVAL'
+              value: '300'
+            }
+            {
               name: 'KEY_VAULT_URI'
               value: keyVaultUri
             }
@@ -86,6 +90,10 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'AZURE_OPENAI_DEPLOYMENT'
+              value: 'gpt-4o'
+            }
+            {
+              name: 'HERMES_MODEL'
               value: 'gpt-4o'
             }
           ]

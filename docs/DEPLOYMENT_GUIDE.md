@@ -68,6 +68,7 @@ Expected components:
 - Container App runtime
 - ingress endpoint
 - workspace environment variables
+- periodic workspace save configuration
 - readiness and liveness probes
 
 Run:
@@ -116,7 +117,7 @@ Required environment variables:
 - `AZURE_OPENAI_ENDPOINT`
 - `AZURE_OPENAI_DEPLOYMENT`
 
-The bridge now validates these at startup.
+The bridge validates these at startup and reports readiness accordingly.
 
 ### Azure AI Foundry path
 
@@ -132,8 +133,15 @@ Recommended environment variables:
 - `WORKSPACE_STORAGE_ACCOUNT`
 - `WORKSPACE_CONTAINER=hermes-workspace`
 - `WORKSPACE_NAMESPACE=<stable-namespace>`
+- `WORKSPACE_SYNC_INTERVAL=300`
 
-The bridge now contains a lightweight recursive Blob restore/save implementation.
+The bridge now contains:
+
+- recursive Blob restore
+- recursive Blob save
+- sqlite hot-backup upload for `.db` files
+- periodic save loop
+- save on shutdown
 
 ---
 
@@ -153,11 +161,13 @@ After Phase 2:
 - `healthz` returns success
 - `readyz` transitions to ready after startup
 - environment variables for workspace/provider are visible in the app configuration
+- logs show provider bootstrap and workspace restore messages
 
 After Phase 3:
 - APIM route exists
 - channel route strategy is defined
 - demo client can hit the invocation endpoint
+- status action returns provider/runtime metadata
 
 ---
 
@@ -173,11 +183,12 @@ Add `--force` to skip confirmation.
 
 ## 8. Current maturity note
 
-This repo is now best described as a **deployable workshop starter repo with real cloud wiring patterns**:
+This repo is now best described as a **deployable workshop starter repo with lifecycle-aware runtime behavior**:
 
 - provider bootstrap validates real Azure configuration
-- workspace sync models real Blob restore/save behavior
+- workspace sync restores, periodically saves, and flushes on shutdown
 - storage RBAC and container env wiring are represented in Bicep
-- probes and workspace env vars are represented in Container Apps config
+- probes and runtime state are represented in Container Apps config
+- runtime supports `status`, `warmup`, and `cron` style actions
 
-It is still not a fully production-hardened landing-zone implementation, but it is substantially closer to something a customer team could adapt into a real internal starter repo.
+It is still not a fully production-hardened landing-zone implementation, but it is now much closer to something a customer team could adapt into a real internal starter repo.
